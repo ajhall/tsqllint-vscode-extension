@@ -1,72 +1,43 @@
 {
-    "name": "tsqllint",
-    "description": "A VS Code Extension For TSQLLint",
-    "author": "Nathan Boyd",
-    "license": "MIT",
-    "version": "1.3.0",
-    "publisher": "tsqllint",
-    "categories": [
-        "Linters"
-    ],
-    "main": "./client/out/extension",
-    "contributes": {
-        "configuration": {
-            "type": "object",
-            "title": "TSQLLint Configuration",
-            "properties": {
-                "languageServerExample.maxNumberOfProblems": {
-                    "scope": "resource",
-                    "type": "number",
-                    "default": 100,
-                    "description": "Controls the maximum number of problems produced by the server."
-                },
-                "languageServerExample.trace.server": {
-                    "scope": "window",
-                    "type": "string",
-                    "enum": [
-                        "off",
-                        "messages",
-                        "verbose"
-                    ],
-                    "default": "off",
-                    "description": "Traces the communication between VSCode and the language server."
-                }
-            }
-        }
-    },
-    "icon": "images/icon.png",
-    "activationEvents": [
-        "onLanguage:sql"
-    ],
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/tsqllint/tsqllint-vscode-extension"
-    },
-    "engines": {
-        "vscode": "^1.23.0"
-    },
-    "devDependencies": {
-        "@plex/prettier-config": "^1.0.0",
-        "@types/mocha": "^2.2.42",
-        "@types/node": "^6.0.88",
-        "@typescript-eslint/eslint-plugin": "^4.22.0",
-        "@typescript-eslint/parser": "^4.22.0",
-        "eslint": "^7.24.0",
-        "eslint-config-plex-standards": "^1.1.1",
-        "eslint-plugin-import": "^2.22.1",
-        "prettier": "^2.2.1",
-        "typescript": "^4.2.4",
-        "vsce": "^1.87.1"
-    },
-    "scripts": {
-        "lint": "eslint -c ./.eslintrc '**/src/**/*.ts'",
-        "build-changelog": "conventional-changelog -i CHANGELOG.md -u -s -r 0 && git add CHANGELOG.md",
-        "vscode:prepublish": "cd client && npm run update-vscode && cd .. && npm run compile",
-        "compile:client": "tsc -p ./client/tsconfig.json",
-        "compile:server": "tsc -p ./server/tsconfig.json",
-        "watch:client": "tsc -w -p ./client/tsconfig.json",
-        "watch:server": "tsc -w -p ./server/tsconfig.json",
-        "compile": "npm run compile:client && npm run compile:server",
-        "postinstall": "cd client && npm install && cd ../server && npm install && cd .."
-    }
+  "name": "tsqllint-plex",
+  "description": "A VS Code Extension For TSQLLint",
+  "author": "Plex Systems, Inc.",
+  "license": "MIT",
+  "version": "2.0.0",
+  "publisher": "plex",
+  "categories": [
+    "Linters"
+  ],
+  "main": "./client/out/extension",
+  "contributes": {},
+  "icon": "images/icon.png",
+  "activationEvents": [
+    "onLanguage:sql"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://dev.azure.com/plexdev/PlexSystems/_git/tsqllint-vscode-extension"
+  },
+  "engines": {
+    "vscode": "^1.23.0"
+  },
+  "devDependencies": {
+    "@plex/prettier-config": "^1.0.0",
+    "@types/node": "^12.12.0",
+    "@typescript-eslint/eslint-plugin": "^4.22.0",
+    "@typescript-eslint/parser": "^4.22.0",
+    "eslint": "^7.24.0",
+    "eslint-config-plex-standards": "^1.1.1",
+    "eslint-config-prettier": "^6.15.0",
+    "eslint-plugin-import": "^2.22.1",
+    "prettier": "^2.2.1",
+    "typescript": "^4.2.4",
+    "vsce": "^1.87.1"
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -b",
+    "watch": "tsc -b -w",
+    "postinstall": "cd client && npm install && cd ../server && npm install && cd .."
+  }
 }
