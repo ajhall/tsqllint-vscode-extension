@@ -9,14 +9,14 @@ interface IEdit {
 }
 
 interface IDiagnosticCommands {
-  error: ITSQLLintViolation;
+  violation: ITSQLLintViolation;
   fileVersion: number;
   disableLine: IEdit[];
 }
 
 const commandStore: { [fileUri: string]: IDiagnosticCommands[] } = {};
 
-export const registerFileErrors = (file: TextDocument, errors: ITSQLLintViolation[]) => {
+export const registerFileViolations = (file: TextDocument, errors: ITSQLLintViolation[]) => {
   const lines = file.getText().split("\n");
 
   const toDiagnosticCommands = (tsqlLintViolation: ITSQLLintViolation): IDiagnosticCommands => {
@@ -37,7 +37,7 @@ export const registerFileErrors = (file: TextDocument, errors: ITSQLLintViolatio
     };
 
     return {
-      error: tsqlLintViolation,
+      violation: tsqlLintViolation,
       fileVersion: file.version,
       disableLine: getDisableEdit()
     };
@@ -56,9 +56,9 @@ const findCommands = (fileUri: string, { start, end }: server.Range): IDiagnosti
     return a.character - b.character;
   };
 
-  return fileCommands.filter(({ error }): boolean => {
-    const eStart = error.range.start;
-    const eEnd = error.range.end;
+  return fileCommands.filter(({ violation }): boolean => {
+    const eStart = violation.range.start;
+    const eEnd = violation.range.end;
     if (comparePos(eEnd, start) < 0) {
       return false;
     }
@@ -75,7 +75,7 @@ export const getCommands = (params: CodeActionParams): Command[] => {
   const getDisableCommands = (): Command[] => {
     const toDisableCommand = (command: IDiagnosticCommands) => {
       return server.Command.create(
-        `Disable: ${command.error.rule} for this line`,
+        `Disable: ${command.violation.rule} for this line`,
         "_tsql-lint.change",
         params.textDocument.uri,
         command.fileVersion,
@@ -87,11 +87,11 @@ export const getCommands = (params: CodeActionParams): Command[] => {
       const pos = { line: 0, character: 0 };
       const edit: IEdit = {
         range: { start: pos, end: pos },
-        newText: `/* tsqllint-disable ${command.error.rule} */\n`
+        newText: `/* tsqllint-disable ${command.violation.rule} */\n`
       };
 
       return server.Command.create(
-        `Disable: ${command.error.rule} for this file`,
+        `Disable: ${command.violation.rule} for this file`,
         "_tsql-lint.change",
         params.textDocument.uri,
         command.fileVersion,

@@ -3,7 +3,7 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import * as uid from "uid-safe";
-import { sync as commandExists } from "command-exists";
+import { sync as which } from "which";
 import {
   createConnection,
   Diagnostic,
@@ -16,7 +16,7 @@ import {
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { ChildProcess, spawn } from "child_process";
 import { ITSQLLintViolation, parseErrors } from "./parseError";
-import { getCommands, registerFileErrors } from "./commands";
+import { getCommands, registerFileViolations } from "./commands";
 
 const buildTempFilePath = (textDocument: TextDocument) => {
   const ext = path.extname(textDocument.uri) || ".sql";
@@ -50,10 +50,10 @@ const parseChildProcessResult = (
     const stdoutLines: string[] = processStdout.split("\n");
     const violationMessages: string[] = [];
 
-    stdoutLines.forEach((element) => {
-      const index = element.indexOf("(");
+    stdoutLines.forEach((line) => {
+      const index = line.indexOf("(");
       if (index > 0) {
-        violationMessages.push(element.substring(index, element.length - 1));
+        violationMessages.push(line.substring(index, line.length - 1));
       }
     });
 
@@ -72,12 +72,12 @@ const validateBuffer = (textDocument: TextDocument, connection: _Connection): vo
 
   lintBuffer(tempFilePath, (error: Error | null, lintErrorStrings: string[]) => {
     if (error !== null) {
-      registerFileErrors(textDocument, []);
+      registerFileViolations(textDocument, []);
       throw error;
     }
 
     const errors = parseErrors(textDocument.getText(), lintErrorStrings);
-    registerFileErrors(textDocument, errors);
+    registerFileViolations(textDocument, errors);
 
     const diagnostics = errors.map(toDiagnostic);
     connection.sendDiagnostics({ uri: textDocument.uri, diagnostics });
@@ -87,6 +87,7 @@ const validateBuffer = (textDocument: TextDocument, connection: _Connection): vo
 };
 
 const ActivateExtension = () => {
+  process.stdout.write("Activating TSQLLint extension.\n");
   const connection = createConnection(ProposedFeatures.all);
   connection.onInitialize(
     (): InitializeResult => {
@@ -110,10 +111,19 @@ const ActivateExtension = () => {
   connection.listen();
 };
 
-if (commandExists("tsqllint")) {
-  ActivateExtension();
-} else {
-  process.stderr.write(
-    "The tsqllint command was not found on the PATH. The TSQLLint extension will not be activated.\n"
-  );
+const extensionNotActivatedMessage =
+  "The tsqllint executable was not found on the PATH. The TSQLLint extension will not be activated.\n";
+
+try {
+  const resolvedPath = which("tsqllint");
+  const extension = path.extname(resolvedPath).toLowerCase();
+  if (extension === ".exe" || extension === "") {
+    process.stdout.write(`Found TSQLLint executable at ${resolvedPath}\n`);
+    ActivateExtension();
+  } else {
+    process.stderr.write(`Found TSQLLint at ${resolvedPath}, but it did not appear to be an executable binary.\n`);
+    process.stderr.write(extensionNotActivatedMessage);
+  }
+} catch (error) {
+  process.stderr.write(extensionNotActivatedMessage);
 }

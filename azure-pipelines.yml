@@ -1,6 +1,5 @@
 pool: Plex Hosted Ubuntu 1604
 
 steps:
-  - script: npm run compile
   - script: vsce package
   - publish: "**/*.vsix"

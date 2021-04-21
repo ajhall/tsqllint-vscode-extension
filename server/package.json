@@ -13,14 +13,14 @@
     "node": "*"
   },
   "dependencies": {
-    "@types/uid-safe": "^2.1.2",
-    "command-exists": "^1.2.9",
     "uid-safe": "^2.1.5",
     "vscode-languageserver": "^7.0.0",
-    "vscode-languageserver-textdocument": "^1.0.1"
+    "vscode-languageserver-textdocument": "^1.0.1",
+    "which": "^2.0.2"
   },
   "devDependencies": {
-    "@types/command-exists": "^1.2.0",
-    "@types/node": "^14.0.27"
+    "@types/node": "^14.0.27",
+    "@types/uid-safe": "^2.1.2",
+    "@types/which": "^2.0.0"
   }
 }
