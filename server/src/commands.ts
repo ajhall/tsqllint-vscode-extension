@@ -1,7 +1,7 @@
 import { TextDocument } from "vscode-languageserver-textdocument";
 import * as server from "vscode-languageserver/node";
 import { CodeActionParams, Command, Position } from "vscode-languageserver/node";
-import { ITsqlLintError } from "./parseError";
+import { ITSQLLintViolation } from "./parseError";
 
 interface IEdit {
   range: { start: server.Position; end: server.Position };
@@ -9,24 +9,24 @@ interface IEdit {
 }
 
 interface IDiagnosticCommands {
-  error: ITsqlLintError;
+  error: ITSQLLintViolation;
   fileVersion: number;
   disableLine: IEdit[];
 }
 
 const commandStore: { [fileUri: string]: IDiagnosticCommands[] } = {};
 
-export const registerFileErrors = (file: TextDocument, errors: ITsqlLintError[]) => {
+export const registerFileErrors = (file: TextDocument, errors: ITSQLLintViolation[]) => {
   const lines = file.getText().split("\n");
 
-  const toDiagnosticCommands = (error: ITsqlLintError): IDiagnosticCommands => {
-    const { start, end } = error.range;
+  const toDiagnosticCommands = (tsqlLintViolation: ITSQLLintViolation): IDiagnosticCommands => {
+    const { start, end } = tsqlLintViolation.range;
 
     const spaceMatch = /^\s*/.exec(lines[start.line]);
     const space = spaceMatch === null ? "" : spaceMatch[0];
 
     const getDisableEdit = (): IEdit[] => {
-      const { rule } = error;
+      const { rule } = tsqlLintViolation;
       const line = lines[start.line];
       return [
         {
@@ -37,7 +37,7 @@ export const registerFileErrors = (file: TextDocument, errors: ITsqlLintError[])
     };
 
     return {
-      error,
+      error: tsqlLintViolation,
       fileVersion: file.version,
       disableLine: getDisableEdit()
     };
@@ -46,29 +46,30 @@ export const registerFileErrors = (file: TextDocument, errors: ITsqlLintError[])
   commandStore[file.uri] = errors.map(toDiagnosticCommands);
 };
 
-export const getCommands = (params: CodeActionParams): Command[] => {
-  const findCommands = (fileUri: string, { start, end }: server.Range): IDiagnosticCommands[] => {
-    const fileCommands = Object.prototype.hasOwnProperty.call(commandStore, fileUri) ? commandStore[fileUri] : [];
+const findCommands = (fileUri: string, { start, end }: server.Range): IDiagnosticCommands[] => {
+  const fileCommands = Object.prototype.hasOwnProperty.call(commandStore, fileUri) ? commandStore[fileUri] : [];
 
-    const comparePos = (a: Position, b: Position) => {
-      if (a.line !== b.line) {
-        return a.line - b.line;
-      }
-      return a.character - b.character;
-    };
-
-    return fileCommands.filter(({ error }): boolean => {
-      const eStart = error.range.start;
-      const eEnd = error.range.end;
-      if (comparePos(eEnd, start) < 0) {
-        return false;
-      }
-      if (comparePos(eStart, end) > 0) {
-        return false;
-      }
-      return true;
-    });
+  const comparePos = (a: Position, b: Position) => {
+    if (a.line !== b.line) {
+      return a.line - b.line;
+    }
+    return a.character - b.character;
   };
+
+  return fileCommands.filter(({ error }): boolean => {
+    const eStart = error.range.start;
+    const eEnd = error.range.end;
+    if (comparePos(eEnd, start) < 0) {
+      return false;
+    }
+    if (comparePos(eStart, end) > 0) {
+      return false;
+    }
+    return true;
+  });
+};
+
+export const getCommands = (params: CodeActionParams): Command[] => {
   const commands = findCommands(params.textDocument.uri, params.range);
 
   const getDisableCommands = (): Command[] => {

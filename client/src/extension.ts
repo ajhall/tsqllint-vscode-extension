@@ -46,7 +46,7 @@ export const activate = (context: ExtensionContext) => {
 
       if (!success) {
         await vscode.window.showErrorMessage(
-          "Failed to apply SqlLint fixes to the document. " +
+          "Failed to apply TSQLLint fixes to the document. " +
             "Please consider opening an issue with steps to reproduce."
         );
       }
