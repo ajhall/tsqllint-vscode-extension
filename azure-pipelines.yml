@@ -1,5 +1,12 @@
 pool: Plex Hosted Ubuntu 1604
 
+trigger:
+  tags:
+    include:
+      - v*
+
 steps:
-  - script: vsce package
-  - publish: "**/*.vsix"
+  - script: npm install
+  - script: npx vsce publish
+    env:
+      VSCE_PAT: $(VSCE_PAT)
