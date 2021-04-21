@@ -1,6 +1,6 @@
-import * as server from "vscode-languageserver";
-import { CodeActionParams } from "vscode-languageserver-protocol/lib/main";
-import { Command, Position, TextDocument } from "vscode-languageserver/lib/main";
+import * as server from "vscode-languageserver/node";
+import { CodeActionParams } from "vscode-languageserver-protocol/node";
+import { Command, Position, TextDocument } from "vscode-languageserver/node";
 import { ITsqlLintError } from "./parseError";
 
 interface IEdit {

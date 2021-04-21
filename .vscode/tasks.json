@@ -4,8 +4,8 @@
 		{
 			"label": "compile",
 			"dependsOn": [
-				"compile:client",
-				"compile:server"
+				"npm: compile:client",
+				"npm: compile:server"
 			],
 			"problemMatcher": []
 		},
