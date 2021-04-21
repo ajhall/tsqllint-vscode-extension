@@ -3,7 +3,7 @@
   "description": "A VS Code Extension For TSQLLint",
   "author": "Plex Systems, Inc.",
   "license": "MIT",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "publisher": "Plex",
   "categories": [
     "Linters"
