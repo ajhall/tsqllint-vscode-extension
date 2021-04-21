@@ -35,7 +35,7 @@ export const activate = (context: ExtensionContext) => {
     const textEditor = vscode.window.activeTextEditor;
     if (textEditor !== undefined && textEditor.document.uri.toString() === uri) {
       if (textEditor.document.version !== documentVersion) {
-        await vscode.window.showInformationMessage(`SqlLint fixes are outdated and can't be applied to the document.`);
+        await vscode.window.showInformationMessage(`TSQLLint fixes are outdated and can't be applied to the document.`);
       }
 
       const success = await textEditor.edit((mutator) => {
