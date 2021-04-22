@@ -61,16 +61,20 @@ const parseChildProcessResult = (
   });
 };
 
-const lintBuffer = (fileUri: string, callback: (error: Error | null, result: string[]) => void): void => {
-  const childProcess = spawn("tsqllint", [fileUri]);
+const lintBuffer = (
+  fileUri: string,
+  tsqllintPath: string,
+  callback: (error: Error | null, result: string[]) => void
+): void => {
+  const childProcess = spawn(tsqllintPath, [fileUri]);
   parseChildProcessResult(childProcess, callback);
 };
 
-const validateBuffer = (textDocument: TextDocument, connection: _Connection): void => {
+const validateBuffer = (textDocument: TextDocument, connection: _Connection, tsqllintPath: string): void => {
   const tempFilePath: string = buildTempFilePath(textDocument);
   fs.writeFileSync(tempFilePath, textDocument.getText());
 
-  lintBuffer(tempFilePath, (error: Error | null, lintErrorStrings: string[]) => {
+  lintBuffer(tempFilePath, tsqllintPath, (error: Error | null, lintErrorStrings: string[]) => {
     if (error !== null) {
       registerFileViolations(textDocument, []);
       throw error;
@@ -86,7 +90,7 @@ const validateBuffer = (textDocument: TextDocument, connection: _Connection): vo
   });
 };
 
-const ActivateExtension = () => {
+const ActivateExtension = (tsqllintPath: string) => {
   process.stdout.write("Activating TSQLLint extension.\n");
   const connection = createConnection(ProposedFeatures.all);
   connection.onInitialize(
@@ -105,25 +109,18 @@ const ActivateExtension = () => {
   const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
   documents.listen(connection);
   documents.onDidChangeContent((change: { document: TextDocument }) => {
-    validateBuffer(change.document, connection);
+    validateBuffer(change.document, connection, tsqllintPath);
   });
 
   connection.listen();
 };
 
-const extensionNotActivatedMessage =
-  "The tsqllint executable was not found on the PATH. The TSQLLint extension will not be activated.\n";
-
 try {
   const resolvedPath = which("tsqllint");
-  const extension = path.extname(resolvedPath).toLowerCase();
-  if (extension === ".exe" || extension === "") {
-    process.stdout.write(`Found TSQLLint executable at ${resolvedPath}\n`);
-    ActivateExtension();
-  } else {
-    process.stderr.write(`Found TSQLLint at ${resolvedPath}, but it did not appear to be an executable binary.\n`);
-    process.stderr.write(extensionNotActivatedMessage);
-  }
+  process.stdout.write(`Found TSQLLint at ${resolvedPath}\n`);
+  ActivateExtension(resolvedPath);
 } catch (error) {
-  process.stderr.write(extensionNotActivatedMessage);
+  process.stderr.write(
+    "The tsqllint executable was not found on the PATH. The TSQLLint extension will not be activated.\n"
+  );
 }
