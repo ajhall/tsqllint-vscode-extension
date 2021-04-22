@@ -1,0 +1,18 @@
+pool: Plex Hosted Ubuntu 1604
+
+trigger:
+  tags:
+    include:
+      - v*
+
+steps:
+  - task: NodeTool@0
+    displayName: Install Node.js v14
+    inputs:
+      versionSpec: '14.x'
+  - script: npm install
+    displayName: npm install
+  - script: npx vsce publish
+    displayName: Publish to VS Code Extension Marketplace
+    env:
+      VSCE_PAT: $(VSCE_PAT)

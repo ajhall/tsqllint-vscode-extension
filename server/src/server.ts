@@ -1,126 +1,126 @@
 "use strict";
-
-import {
-  createConnection, Diagnostic, DiagnosticSeverity, IConnection, InitializeResult, IPCMessageReader,
-  IPCMessageWriter, TextDocument, TextDocuments} from "vscode-languageserver";
-
-import { ChildProcess } from "child_process";
-import { getCommands, registerFileErrors } from "./commands";
-import { ITsqlLintError, parseErrors } from "./parseError";
-import TSQLLintRuntimeHelper from "./TSQLLintToolsHelper";
-
-import { spawn } from "child_process";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import * as uid from "uid-safe";
+import { sync as which } from "which";
+import {
+  createConnection,
+  Diagnostic,
+  InitializeResult,
+  ProposedFeatures,
+  TextDocuments,
+  TextDocumentSyncKind,
+  _Connection
+} from "vscode-languageserver/node";
+import { TextDocument } from "vscode-languageserver-textdocument";
+import { ChildProcess, spawn } from "child_process";
+import { ITSQLLintViolation, parseErrors } from "./parseError";
+import { getCommands, registerFileViolations } from "./commands";
 
-const applicationRoot = path.parse(process.argv[1]);
-
-const connection: IConnection = createConnection(new IPCMessageReader(process), new IPCMessageWriter(process));
-const documents: TextDocuments = new TextDocuments();
-documents.listen(connection);
-
-// let workspaceRoot: string;
-connection.onInitialize((/*params*/): InitializeResult => {
-  // workspaceRoot = params.rootPath;
-  return {
-    capabilities: {
-      textDocumentSync: documents.syncKind,
-      codeActionProvider: true,
-    },
-  };
-});
-
-connection.onCodeAction(getCommands);
-
-documents.onDidChangeContent((change) => {
-  ValidateBuffer(change.document);
-});
-
-const toolsHelper: TSQLLintRuntimeHelper = new TSQLLintRuntimeHelper(applicationRoot.dir);
-
-function LintBuffer(fileUri: string, callback: ((error: Error, result: string[]) => void)): void {
-
-  toolsHelper.TSQLLintRuntime().then((toolsPath: string) => {
-    let childProcess: ChildProcess;
-
-    if (os.type() === "Darwin") {
-      childProcess = spawn(`${toolsPath}/osx-x64/TSQLLint.Console`, [fileUri]);
-    } else if (os.type() === "Linux") {
-      childProcess = spawn(`${toolsPath}/linux-x64/TSQLLint.Console`, [fileUri]);
-    } else if (os.type() === "Windows_NT") {
-      if (os.type() === "Windows_NT") {
-        if (process.arch === "ia32") {
-          childProcess = spawn(`${toolsPath}/win-x86/TSQLLint.Console.exe`, [fileUri]);
-        } else if (process.arch === "x64") {
-          childProcess = spawn(`${toolsPath}/win-x64/TSQLLint.Console.exe`, [fileUri]);
-        } else {
-          throw new Error(`Invalid Platform: ${os.type()}, ${process.arch}`);
-        }
-      }
-    } else {
-      throw new Error(`Invalid Platform: ${os.type()}, ${process.arch}`);
-    }
-
-    let result: string;
-    childProcess.stdout.on("data", (data: string) => {
-      result += data;
-    });
-
-    childProcess.stderr.on("data", (data: string) => {
-      console.log(`stderr: ${data}`);
-    });
-
-    childProcess.on("close", () => {
-      const list: string[] = result.split("\n");
-      const resultsArr: string[] = new Array();
-
-      list.forEach((element) => {
-        const index = element.indexOf("(");
-        if (index > 0) {
-          resultsArr.push(element.substring(index, element.length - 1));
-        }
-      });
-
-      callback(null, resultsArr);
-    });
-  }).catch((error: Error) => {
-    throw error;
-  });
-}
-
-function TempFilePath(textDocument: TextDocument) {
+const buildTempFilePath = (textDocument: TextDocument) => {
   const ext = path.extname(textDocument.uri) || ".sql";
   const name = uid.sync(18) + ext;
   return path.join(os.tmpdir(), name);
-}
+};
 
-function ValidateBuffer(textDocument: TextDocument): void {
-  const tempFilePath: string = TempFilePath(textDocument);
+const toDiagnostic = (lintError: ITSQLLintViolation): Diagnostic => {
+  return {
+    severity: lintError.severity,
+    range: lintError.range,
+    message: lintError.message,
+    source: `TSQLLint: ${lintError.rule}`
+  };
+};
+
+const parseChildProcessResult = (
+  childProcess: ChildProcess,
+  callback: (error: Error | null, result: string[]) => void
+) => {
+  let processStdout: string;
+  childProcess.stdout?.on("data", (data: string) => {
+    processStdout += data;
+  });
+
+  childProcess.stderr?.on("data", (data: string) => {
+    process.stderr.write(`stderr: ${data}\n`);
+  });
+
+  childProcess.on("close", () => {
+    const stdoutLines: string[] = processStdout.split("\n");
+    const violationMessages: string[] = [];
+
+    stdoutLines.forEach((line) => {
+      const index = line.indexOf("(");
+      if (index > 0) {
+        violationMessages.push(line.substring(index, line.length - 1));
+      }
+    });
+
+    callback(null, violationMessages);
+  });
+};
+
+const lintBuffer = (
+  fileUri: string,
+  tsqllintPath: string,
+  callback: (error: Error | null, result: string[]) => void
+): void => {
+  const childProcess = spawn(tsqllintPath, [fileUri]);
+  parseChildProcessResult(childProcess, callback);
+};
+
+const validateBuffer = (textDocument: TextDocument, connection: _Connection, tsqllintPath: string): void => {
+  const tempFilePath: string = buildTempFilePath(textDocument);
   fs.writeFileSync(tempFilePath, textDocument.getText());
 
-  LintBuffer(tempFilePath, (error: Error, lintErrorStrings: string[]) => {
-    if (error) {
-      registerFileErrors(textDocument, []);
+  lintBuffer(tempFilePath, tsqllintPath, (error: Error | null, lintErrorStrings: string[]) => {
+    if (error !== null) {
+      registerFileViolations(textDocument, []);
       throw error;
     }
 
     const errors = parseErrors(textDocument.getText(), lintErrorStrings);
-    registerFileErrors(textDocument, errors);
-    const diagnostics = errors.map(toDiagnostic);
+    registerFileViolations(textDocument, errors);
 
+    const diagnostics = errors.map(toDiagnostic);
     connection.sendDiagnostics({ uri: textDocument.uri, diagnostics });
-    function toDiagnostic(lintError: ITsqlLintError): Diagnostic {
-      return {
-        severity: DiagnosticSeverity.Error,
-        range: lintError.range,
-        message: lintError.message,
-        source: `TSQLLint: ${lintError.rule}`,
-      };
-    }
+
     fs.unlinkSync(tempFilePath);
   });
-}
+};
 
-connection.listen();
+const ActivateExtension = (tsqllintPath: string) => {
+  process.stdout.write("Activating TSQLLint extension.\n");
+  const connection = createConnection(ProposedFeatures.all);
+  connection.onInitialize(
+    (): InitializeResult => {
+      return {
+        capabilities: {
+          textDocumentSync: TextDocumentSyncKind.Full,
+          codeActionProvider: true
+        }
+      };
+    }
+  );
+
+  connection.onCodeAction(getCommands);
+
+  const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
+  documents.listen(connection);
+  documents.onDidChangeContent((change: { document: TextDocument }) => {
+    validateBuffer(change.document, connection, tsqllintPath);
+  });
+
+  connection.listen();
+};
+
+try {
+  const resolvedPath = which("tsqllint");
+  process.stdout.write(`Found TSQLLint at ${resolvedPath}\n`);
+  ActivateExtension(resolvedPath);
+} catch (error) {
+  process.stderr.write(
+    "The tsqllint executable was not found on the PATH. The TSQLLint extension will not be activated.\n"
+  );
+}

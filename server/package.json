@@ -1,23 +1,26 @@
 {
-    "name": "tsqllint-vs-extension-server",
-    "description": "A VS Code Extension For TSQLLint",
-    "author": "Nathan Boyd",
-    "license": "MIT",
-    "version": "1.3.0",
-    "publisher": "TSQLLint",
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/tsqllint/tsqllint-vscode-extension"
-    },
-    "engines": {
-        "node": "*"
-    },
-    "dependencies": {
-        "@types/uid-safe": "^2.1.2",
-        "decompress": "^4.2.0",
-        "decompress-targz": "^4.1.1",
-        "follow-redirects": "^1.4.1",
-        "uid-safe": "^2.1.5",
-        "vscode-languageserver": "^4.2.1"
-    }
+  "name": "tsqllint-vs-extension-server",
+  "description": "A VS Code Extension For TSQLLint",
+  "author": "Nathan Boyd",
+  "license": "MIT",
+  "version": "1.3.0",
+  "publisher": "TSQLLint",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tsqllint/tsqllint-vscode-extension"
+  },
+  "engines": {
+    "node": "*"
+  },
+  "dependencies": {
+    "uid-safe": "^2.1.5",
+    "vscode-languageserver": "^7.0.0",
+    "vscode-languageserver-textdocument": "^1.0.1",
+    "which": "^2.0.2"
+  },
+  "devDependencies": {
+    "@types/node": "^14.0.27",
+    "@types/uid-safe": "^2.1.2",
+    "@types/which": "^2.0.0"
+  }
 }

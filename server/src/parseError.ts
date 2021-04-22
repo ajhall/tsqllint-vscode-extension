@@ -1,37 +1,62 @@
-import { Range } from "vscode-languageserver/lib/main";
+import { DiagnosticSeverity, Range } from "vscode-languageserver/node";
 
-export interface ITsqlLintError {
-    range: Range;
-    message: string;
-    rule: string;
+export interface ITSQLLintViolation {
+  range: Range;
+  message: string;
+  rule: string;
+  severity: DiagnosticSeverity;
 }
 
-export function parseErrors(docText: string, errorStrings: string[]): ITsqlLintError[] {
-    const lines = docText.split("\n");
-    const lineStarts = lines.map((line) => line.match(/^\s*/)[0].length);
-    return errorStrings.map(parseError).filter(isValidError);
-    function parseError(errorString: string): ITsqlLintError {
-        const validationError: string[] = errorString.split(":");
-        const positionStr: string = validationError[0].replace("(", "").replace(")", "");
-        const positionArr: number[] = positionStr.split(",").map(Number);
+const isValidError = (violation: ITSQLLintViolation): boolean => {
+  return violation.range.start.line >= 0;
+};
 
-        const line = Math.max(positionArr[0] - 1, 0);
-        const colStart = lineStarts[line];
-        var colEnd = 0;
-        if (lines[line]) {
-            colEnd = lines[line].length;
-        }
-        const range: Range = {
-            start: {line, character: colStart},
-            end: {line, character: colEnd},
-        };
-        return {
-            range,
-            message: validationError[2].trim(),
-            rule: validationError[1].trim(),
-        };
+const matchDiagnosticSeverity = (severityName: string): DiagnosticSeverity => {
+  switch (severityName) {
+    case "error":
+      return DiagnosticSeverity.Error;
+    case "warning":
+      return DiagnosticSeverity.Warning;
+    default:
+      return DiagnosticSeverity.Information;
+  }
+};
+
+export const parseErrors = (docText: string, violationStrings: string[]): ITSQLLintViolation[] => {
+  const lines = docText.split("\n");
+  const lineStarts = lines.map((line) => {
+    const spaceMatch = /^\s*/.exec(line);
+    const space = spaceMatch === null ? "" : spaceMatch[0];
+    return space.length;
+  });
+
+  const parseError = (violationString: string): ITSQLLintViolation => {
+    const violationParts: string[] = violationString.split(":");
+    const positionStr: string = violationParts[0].replace("(", "").replace(")", "");
+    const positionArr: number[] = positionStr.split(",").map(Number);
+    const severityRuleName: string[] = violationParts[1].trim().split(" ");
+    const reportedSeverity: DiagnosticSeverity = matchDiagnosticSeverity(severityRuleName[0]);
+
+    const line = Math.max(positionArr[0] - 1, 0);
+    const colStart = lineStarts[line];
+
+    let colEnd = 0;
+    if (lines[line]) {
+      colEnd = lines[line].length;
     }
-}
-function isValidError(error: ITsqlLintError): boolean {
-    return error.range.start.line >= 0;
-}
+
+    const range: Range = {
+      start: { line, character: colStart },
+      end: { line, character: colEnd }
+    };
+
+    return {
+      range,
+      message: violationParts[2].trim(),
+      rule: violationParts[1].trim(),
+      severity: reportedSeverity
+    };
+  };
+
+  return violationStrings.map(parseError).filter(isValidError);
+};
