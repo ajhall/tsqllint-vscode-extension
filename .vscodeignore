@@ -1,8 +1,5 @@
 **
 !images/
 !package.json
-!out/
 !README.md
 !**/out/
-!client/node_modules
-!server/node_modules
