@@ -15,7 +15,7 @@ import {
 } from "vscode-languageserver/node";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { ChildProcess, spawn } from "child_process";
-import { ITSQLLintViolation, parseErrors } from "./parseError";
+import { ITSQLLintViolation, parseTsqllintViolations } from "./parseError";
 import { getCommands, registerFileViolations } from "./commands";
 
 const buildTempFilePath = (textDocument: TextDocument) => {
@@ -80,7 +80,7 @@ const validateBuffer = (textDocument: TextDocument, connection: _Connection, tsq
       throw error;
     }
 
-    const errors = parseErrors(textDocument.getText(), lintErrorStrings);
+    const errors = parseTsqllintViolations(textDocument.getText(), lintErrorStrings);
     registerFileViolations(textDocument, errors);
 
     const diagnostics = errors.map(toDiagnostic);
@@ -90,7 +90,7 @@ const validateBuffer = (textDocument: TextDocument, connection: _Connection, tsq
   });
 };
 
-const ActivateExtension = (tsqllintPath: string) => {
+const activateExtension = (tsqllintPath: string) => {
   process.stdout.write("Activating TSQLLint extension.\n");
   const connection = createConnection(ProposedFeatures.all);
   connection.onInitialize(
@@ -118,7 +118,7 @@ const ActivateExtension = (tsqllintPath: string) => {
 try {
   const resolvedPath = which("tsqllint");
   process.stdout.write(`Found TSQLLint at ${resolvedPath}\n`);
-  ActivateExtension(resolvedPath);
+  activateExtension(resolvedPath);
 } catch (error) {
   process.stderr.write(
     "The tsqllint executable was not found on the PATH. The TSQLLint extension will not be activated.\n"
