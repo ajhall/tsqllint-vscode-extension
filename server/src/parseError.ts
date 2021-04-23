@@ -11,6 +11,11 @@ const isValidError = (violation: ITSQLLintViolation): boolean => {
   return violation.range.start.line >= 0;
 };
 
+const isValidViolationString = (violationString: string): boolean => {
+  const semicolonCount = (violationString.match(/:/g) ?? []).length;
+  return semicolonCount >= 2;
+};
+
 const matchDiagnosticSeverity = (severityName: string): DiagnosticSeverity => {
   switch (severityName) {
     case "error":
@@ -31,11 +36,13 @@ export const parseErrors = (docText: string, violationStrings: string[]): ITSQLL
   });
 
   const parseError = (violationString: string): ITSQLLintViolation => {
-    const violationParts: string[] = violationString.split(":");
+    const violationParts: string[] = violationString.split(":", 3);
+
     const positionStr: string = violationParts[0].replace("(", "").replace(")", "");
     const positionArr: number[] = positionStr.split(",").map(Number);
-    const severityRuleName: string[] = violationParts[1].trim().split(" ");
-    const reportedSeverity: DiagnosticSeverity = matchDiagnosticSeverity(severityRuleName[0]);
+
+    const severityAndRuleName: string[] = violationParts[1].trim().split(" ");
+    const severity: DiagnosticSeverity = matchDiagnosticSeverity(severityAndRuleName[0]);
 
     const line = Math.max(positionArr[0] - 1, 0);
     const colStart = lineStarts[line];
@@ -54,9 +61,9 @@ export const parseErrors = (docText: string, violationStrings: string[]): ITSQLL
       range,
       message: violationParts[2].trim(),
       rule: violationParts[1].trim(),
-      severity: reportedSeverity
+      severity
     };
   };
 
-  return violationStrings.map(parseError).filter(isValidError);
+  return violationStrings.filter(isValidViolationString).map(parseError).filter(isValidError);
 };
