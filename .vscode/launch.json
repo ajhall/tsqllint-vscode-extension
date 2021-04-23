@@ -5,12 +5,11 @@
       "type": "extensionHost",
       "request": "launch",
       "name": "Launch Client",
-      "runtimeExecutable": "${execPath}",
       "args": ["--disable-extensions", "--extensionDevelopmentPath=${workspaceRoot}"],
       "outFiles": ["${workspaceRoot}/client/out/**/*.js"],
       "preLaunchTask": {
         "type": "npm",
-        "script": "compile"
+        "script": "bundle:watch"
       }
     },
     {

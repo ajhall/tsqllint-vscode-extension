@@ -3,7 +3,7 @@
   "description": "A VS Code Extension For TSQLLint",
   "author": "Plex Systems, Inc.",
   "license": "MIT",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "publisher": "PlexDevOpsTeam",
   "categories": [
     "Linters"
@@ -26,18 +26,31 @@
     "@types/node": "^12.12.0",
     "@typescript-eslint/eslint-plugin": "^4.22.0",
     "@typescript-eslint/parser": "^4.22.0",
+    "esbuild": "^0.11.12",
     "eslint": "^7.24.0",
     "eslint-config-plex-standards": "^1.1.1",
     "eslint-config-prettier": "^6.15.0",
     "eslint-plugin-import": "^2.22.1",
+    "npm-run-all": "^4.1.5",
     "prettier": "^2.2.1",
+    "rimraf": "^3.0.2",
     "typescript": "^4.2.4",
     "vsce": "^1.87.1"
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
-    "compile": "tsc -b",
-    "watch": "tsc -b -w",
+    "clean": "npx rimraf server/out && npx rimraf client/out",
+    "vscode:prepublish": "npm run bundle:prod",
+    "bundle": "npm run esbuild-client && npm run esbuild-server",
+    "bundle:watch": "npm-run-all --parallel esbuild-client-watch esbuild-server-watch",
+    "bundle:prod": "npm run clean && npm run esbuild-client-prod && npm run esbuild-server-prod",
+    "esbuild-client-base": "esbuild ./client/src/extension.ts --bundle --outfile=client/out/extension.js --external:vscode --format=cjs --platform=node",
+    "esbuild-client": "npm run -S esbuild-client-base -- --sourcemap",
+    "esbuild-client-prod": "npm run -S esbuild-client-base -- --minify",
+    "esbuild-client-watch": "npm run -S esbuild-client-base -- --sourcemap --watch",
+    "esbuild-server-base": "esbuild ./server/src/server.ts --bundle --outfile=server/out/server.js --external:vscode --format=cjs --platform=node",
+    "esbuild-server": "npm run -S esbuild-server-base -- --sourcemap",
+    "esbuild-server-prod": "npm run -S esbuild-server-base -- --minify",
+    "esbuild-server-watch": "npm run -S esbuild-server-base -- --sourcemap --watch",
     "postinstall": "cd client && npm install && cd ../server && npm install && cd .."
   }
 }
