@@ -1,0 +1,8 @@
+{
+	"recommendations": [
+		"connor4312.esbuild-problem-matchers",
+		"esbenp.prettier-vscode",
+		"dbaeumer.vscode-eslint",
+		"editorconfig.editorconfig"
+	]
+}
